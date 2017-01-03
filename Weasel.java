@@ -2,6 +2,7 @@ package weasel;
 import java.net.*;
 import java.io.*;
 import apollo.iface.*;
+import apollo.server.DataStoreEngine;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 
@@ -49,22 +50,32 @@ public class Weasel implements Runnable {
 
 
 	//======================================
+	//if you enter an argument, like "localhost",
+	//		it will look up the RMI registry for the DataSource
+	//if there is no argument, it will start up Apollo, which will register it
 	public static void main(String[] args) throws IOException {
-		//get the datastore object
-		//this depends on the Apollo server running
-		String host="localhost";
 		if (args!=null && args.length>0) {
-			host=args[0];
-		}
-        try {
-            Registry registry = LocateRegistry.getRegistry(host);
-            DataStore ds = (DataStore) registry.lookup("DataStore");
+			String host=args[0];
 
+			//lookup the datastore from the registry
+        	try {
+        	    Registry registry = LocateRegistry.getRegistry(host);
+        	    DataStore ds = (DataStore) registry.lookup("DataStore");
+
+				//now start up weasel
+				Weasel w=new Weasel(ds);
+				new Thread(w).start();
+        	} catch (Exception e) {
+        	    System.err.println("exception: " + e.toString());
+        	}
+
+		} else {
+			//start up apollo
+			String filename="vos2.sqlite";  //hard-coded, would be very easy to have it passed in
+			DataStore ds=DataStoreEngine.create(filename);
 			//now start up weasel
 			Weasel w=new Weasel(ds);
 			new Thread(w).start();
-        } catch (Exception e) {
-            System.err.println("exception: " + e.toString());
-        }
+		}
 	}
 }
